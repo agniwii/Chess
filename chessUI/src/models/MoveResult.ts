@@ -1,4 +1,5 @@
 import { Piece } from "../types";
+import { Position } from "./Position";
 
 export interface MoveResult {
     isValidMove: boolean;
@@ -11,4 +12,6 @@ export interface MoveResult {
     isPromotion: boolean;
     isEnPassant: boolean;
     isCastling: boolean;
+    from: Position;
+    to: Position;
 }
