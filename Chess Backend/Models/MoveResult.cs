@@ -12,5 +12,8 @@ namespace Chess_Backend.Models
         public bool IsPromotion { get; set; }
         public bool IsEnPassant { get; set; }
         public bool IsCastling { get; set; }
+
+        public Position? From { get; set; }
+        public Position? To { get; set; } 
     }
 }

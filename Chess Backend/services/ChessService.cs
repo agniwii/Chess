@@ -124,5 +124,32 @@ namespace Chess_Backend.Services
                 _playerChoices[gameId].Clear();
             }
         }
+        public string DetermineRPSWinner(string choice1, string choice2)
+        {
+            if (choice1 == choice2)
+            {
+                return "Draw";
+            }
+
+            if ((choice1 == "Rock" && choice2 == "Scissors") ||
+                (choice1 == "Paper" && choice2 == "Rock") ||
+                (choice1 == "Scissors" && choice2 == "Paper"))
+            {
+                return "Player1";
+            }
+
+            return "Player2";
+        }
+
+        public string GetCurrentPlayer(string gameId)
+        {
+            string playerColor = _game[gameId].CurrentPlayer.ToString();
+            if (player != null && playerColor == player.Color.ToString())
+            {
+                var currentPlayer = _game[gameId].Players.Find(p => p.Color.ToString() == playerColor.ToString());
+                return currentPlayer != null ? currentPlayer.Name : "Unknown";
+            }
+            return string.Empty;
+        }
     }
 }

@@ -1,4 +1,3 @@
-// tambahin signalR di sini
 using Microsoft.AspNetCore.SignalR;
 using Chess_Backend.Services;
 using Chess_Backend.Models;
@@ -9,13 +8,10 @@ namespace Chess_Backend.Hubs
     public class ChessHub : Hub
     {
         private readonly ChessService _chessService;
-
-
         public ChessHub(ChessService chessService)
         {
             _chessService = chessService;
         }
-
 
         public async Task JoinGame(string gameId, string playerName)
         {
@@ -24,14 +20,19 @@ namespace Chess_Backend.Hubs
                 await Clients.Caller.SendAsync("GameFull", "Game is full, please try again later.");
                 return;
             }
-            if(_chessService.GetGame(gameId) == null)
+
+            if (_chessService.GetGame(gameId) == null)
             {
                 var game = new ChessGame(gameId);
                 _chessService._game.Add(gameId, game);
             }
-            _chessService.AddPlayer(gameId, new Player(playerName, Color.None, Context.ConnectionId));    
+
+            var player = new Player(playerName, Color.None, Context.ConnectionId);
+            _chessService.AddPlayer(gameId, player);
+
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             await Clients.Client(Context.ConnectionId).SendAsync("PlayerJoined", gameId);
+
             if (_chessService.GetTotalPlayers(gameId) == 2)
             {
                 await StartGame(gameId);
@@ -40,14 +41,22 @@ namespace Chess_Backend.Hubs
 
         public async Task StartGame(string gameId)
         {
+            var players = _chessService.GetPlayers(gameId).ToImmutableList();
+            var player1 = players[0];
+            var player2 = players[1];
+
             var response = new
             {
                 GameId = gameId,
                 CurrentPlayer = "White",
-                Players = _chessService?.GetPlayers(gameId)
+                Players = new[]
+                {
+                    new { Name = player1.Name, Color = player1.Color.ToString() },
+                    new { Name = player2.Name, Color = player2.Color.ToString() }
+                }
             };
-            await Clients.Group(gameId).SendAsync("GameReady", response);
 
+            await Clients.Group(gameId).SendAsync("GameReady", response);
         }
 
         public async Task MakeChoice(string gameId, string choice)
@@ -56,13 +65,14 @@ namespace Chess_Backend.Hubs
 
             var players = _chessService.GetPlayers(gameId).ToImmutableList();
             var choices = _chessService.GetPlayerChoices(gameId);
-            // ubah method untuk mengambil player 1 dan player 2 
-            if (choices.Count() == 2)
+
+            if (choices.Count == 2)
             {
                 var player1 = players[0];
                 var player2 = players[1];
 
-                var winner = DetermineRPSWinner(choices[player1.ConnectionId ?? ""], choices[player2.ConnectionId ?? ""]);
+                var winner = _chessService.DetermineRPSWinner(choices[player1.ConnectionId ?? ""], choices[player2.ConnectionId ?? ""]);
+
                 if (winner == "Draw")
                 {
                     await Clients.Client(player1.ConnectionId ?? "").SendAsync("RPSResult", "Draw");
@@ -78,34 +88,28 @@ namespace Chess_Backend.Hubs
                 await Clients.Client(player2.ConnectionId ?? "").SendAsync("RPSResult", $"{player2.Name} gets {(winner == "Player2" ? "White" : "Black")} piece");
 
                 _chessService.ResetPlayerChoices(gameId);
+
+                await StartGame(gameId);
             }
         }
-
-        private string DetermineRPSWinner(string choice1, string choice2)
-        {
-            if (choice1 == choice2)
-            {
-                return "Draw";
-            }
-
-            if ((choice1 == "Rock" && choice2 == "Scissors") ||
-                (choice1 == "Paper" && choice2 == "Rock") ||
-                (choice1 == "Scissors" && choice2 == "Paper"))
-            {
-                return "Player1";
-            }
-
-            return "Player2";
-        }
-
 
         public async Task MovePiece(MoveRequest request)
         {
             var from = new Position(request.FromX, request.FromY);
             var to = new Position(request.ToX, request.ToY);
             string? gameId = request.GameId ?? string.Empty;
-            var result = _chessService.MakeMove(gameId,from, to);
-            await Clients.All.SendAsync("ReceiveMove", result);
+
+            var result = _chessService.MakeMove(gameId, from, to);
+
+            if (result.IsValidMove)
+            {
+                await Clients.Group(gameId).SendAsync("ReceiveMove", result);
+                await UpdateCurrentPlayer(gameId);
+            }
+            else
+            {
+                await Clients.Caller.SendAsync("InvalidMove", result.Message);
+            }
         }
 
         public async Task GetPossibleMoves(string gameId, int x, int y)
@@ -117,20 +121,33 @@ namespace Chess_Backend.Hubs
             }
 
             var position = new Position(x, y);
-            if (_chessService == null)
-            {
-                await Clients.Caller.SendAsync("ReceivePossibleMoves", "Chess service is not available.");
-                return;
-            }
             var possibleMoves = _chessService.GetPossibleMoves(gameId, position);
 
             if (possibleMoves == null || possibleMoves.PossibleMoves.Count == 0)
             {
-                if (possibleMoves?.PieceType == "None") await Clients.Caller.SendAsync("ReceivePossibleMoves", "No piece found at the given position.");
-                else await Clients.Caller.SendAsync("ReceivePossibleMoves", $"No possible moves found for the {possibleMoves?.PieceType}.");
+                if (possibleMoves?.PieceType == "None")
+                {
+                    await Clients.Caller.SendAsync("ReceivePossibleMoves", "No piece found at the given position.");
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("ReceivePossibleMoves", $"No possible moves found for the {possibleMoves?.PieceType}.");
+                }
                 return;
             }
-            await Clients.Caller.SendAsync("ReceivePossibleMoves", position);
+
+            await Clients.Caller.SendAsync("ReceivePossibleMoves", possibleMoves);
+        }
+
+        public async Task UpdateCurrentPlayer(string gameId)
+        {
+            var currentPlayer = _chessService.GetCurrentPlayer(gameId);
+            await Clients.Group(gameId).SendAsync("UpdateCurrentPlayer", currentPlayer);
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            await base.OnDisconnectedAsync(exception);
         }
     }
 }
