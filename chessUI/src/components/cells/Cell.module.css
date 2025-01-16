@@ -1,0 +1,23 @@
+.Cell {
+	text-align: center;
+	padding: 1rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+    width: calc((25dvh/10));
+	height: calc((25dvh/10));
+}
+
+@media screen and (max-width: 600px){
+    .Cell{
+        width: calc((10dvw/10));
+        height: calc((10dvw/10));
+    }    
+}
+
+.Light {
+	background-color: rgb(235, 228, 219); /*#efefef;*/
+}
+.Dark {
+	background-color: #b6b3b3;
+}

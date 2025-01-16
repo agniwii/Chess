@@ -1,0 +1,14 @@
+
+.Piece{
+    width: 6dvh;
+    transition: all 0.3s;
+    display: flex;
+    justify-self: center;
+}
+
+@media screen and (max-width: 600px){
+    .Piece{
+        width: 6dvw;
+    }
+    
+}

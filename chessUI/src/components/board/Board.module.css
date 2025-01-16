@@ -1,0 +1,18 @@
+.Board {
+	padding: 1rem;
+	margin: 1.5rem auto;
+	border-radius: 12px;
+	box-shadow: 0 0 5px 5px #e9e7e7;
+
+	display: grid;
+	grid-template-columns: repeat(8, 1fr);
+	border: 10px solid transparent; 
+      padding: 20px;
+      background: 
+          linear-gradient(45deg, #8B4513, #A0522D, #8B4513) padding-box,
+          linear-gradient(45deg, #8B4513, #A0522D, #8B4513) border-box; 
+      border-radius: 5px; 
+      box-shadow: 
+          0 0 10px rgba(139, 69, 19, 0.5), 
+          inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
