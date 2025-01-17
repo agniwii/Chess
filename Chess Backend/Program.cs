@@ -3,32 +3,34 @@ using Chess_Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
+// Konfigurasi CORS
 builder.Services.AddCors(options =>
 {
-        options.AddPolicy("AllowAllOrigins",policy =>
-        {
-            policy.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-        });
+    options.AddPolicy("AllowSpecificOrigins", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173") // Izinkan origin frontend
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // Izinkan credentials
+    });
 });
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ChessService>();
+
 var app = builder.Build();
 
-app.UseCors("AllowAllOrigins");
+// Gunakan middleware CORS
+app.UseCors("AllowSpecificOrigins");
 
-if(app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
-
 
 app.UseRouting();
 

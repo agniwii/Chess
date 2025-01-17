@@ -1,3 +1,5 @@
+import { Position } from "../models";
+
 export interface Cell
 {
     player: string;
@@ -5,11 +7,19 @@ export interface Cell
 
 export type Board = Array<Array<Cell>>;
 
-export interface GameState
-{
+
+
+interface ChessState {
+
+    gameId: string | null;
+
+    currentPlayerId: string | null;
+
+    selectedPosition: Position | null;
+
+    possibleMoves: Position[];
+
     board: Board;
-    player: string[];
-    moves: Array<{player: string, move: string}>;
 }
 
 export interface signalRState {
@@ -19,7 +29,7 @@ export interface signalRState {
 }
 
 export interface RootState{
-    game: GameState;
+    game: ChessState;
     signalR: signalRState;
 }
 
