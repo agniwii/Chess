@@ -43,7 +43,12 @@ namespace Chess_Backend.Services
         {
             if (!_game.ContainsKey(gameId))
             {
-                throw new ArgumentException("Game not found", nameof(gameId));
+                // throw new ArgumentException("Game not found", nameof(gameId));
+                return new MoveResult
+                {
+                    IsValidMove = false,
+                    Message = "Game not found"
+                };
             }
             if(_game[gameId].CurrentPlayer.ToString() != playerId)
             {

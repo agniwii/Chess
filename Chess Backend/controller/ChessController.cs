@@ -16,6 +16,16 @@ namespace Chess_Backend.Controller
             _chessService = chessService;
         }
 
+        [HttpPost("join-game")]
+        public IActionResult JoinGame([FromBody] JoinGameRequest request)
+        {
+            string gameId = request.GameId;
+            string playerName = request.PlayerName;
+            var player = new Player(playerName, Color.White, string.Empty);
+            _chessService.AddPlayer(gameId, player);
+            return Ok(new { gameId, playerName , Message = "Player added to the game." });
+        }
+
         [HttpPost("move")]
         public IActionResult MakeMove([FromBody] MoveRequest request)
         {
