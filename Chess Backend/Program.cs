@@ -11,6 +11,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins", policy =>
     {
+            // policy.AllowAnyOrigin()
         policy.WithOrigins("http://localhost:5173") // Izinkan origin frontend
               .AllowAnyHeader()
               .AllowAnyMethod()

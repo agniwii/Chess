@@ -15,5 +15,6 @@ namespace Chess_Backend.Models
         {
             return X >= 0 && X < 8 && Y >= 0 && Y < 8;
         }
+        
     }
 }

@@ -1,4 +1,5 @@
-namespace Chess_Backend.Models
+using Chess_Backend.Models;
+namespace Chess_Backend.DTOs
 {
     public class PossibleMovesResponse
     {

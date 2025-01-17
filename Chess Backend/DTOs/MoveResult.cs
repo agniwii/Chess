@@ -1,4 +1,5 @@
-namespace Chess_Backend.Models
+using Chess_Backend.Models;
+namespace Chess_Backend.DTOs
 {
     public class MoveResult
     {
@@ -13,7 +14,7 @@ namespace Chess_Backend.Models
         public bool IsEnPassant { get; set; }
         public bool IsCastling { get; set; }
 
-        public Position? From { get; set; }
-        public Position? To { get; set; } 
+        public  Position? From { get; set; }
+        public  Position? To { get; set; } 
     }
 }

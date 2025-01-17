@@ -14,6 +14,9 @@ namespace Chess_Backend.Models
             Position = position;
         }
 
+        public int MoveCount { get; set; } = 0;
+        
+
         public abstract bool IsValidMove(Position newPosition, Piece?[,] board);
 
         // public bool IsValidMove(Position newPosition, Piece[,] board);

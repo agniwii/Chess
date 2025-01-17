@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using Chess_Backend.Services;
 using Chess_Backend.Models;
 using System.Collections.Immutable;
+using Chess_Backend.DTOs;
 
 namespace Chess_Backend.Hubs
 {
@@ -95,11 +96,12 @@ namespace Chess_Backend.Hubs
 
         public async Task MovePiece(MoveRequest request)
         {
-            var from = new Position(request.FromX, request.FromY);
-            var to = new Position(request.ToX, request.ToY);
-            string? gameId = request.GameId ?? string.Empty;
+            var from = new Position(request.From.X, request.From.Y);
+            var to = new Position(request.To.X, request.To.Y);
+            string gameId = request.GameId;
+            string playerId = request.PlayerId;
 
-            var result = _chessService.MakeMove(gameId, from, to);
+            var result = _chessService.MakeMove(gameId, playerId,from, to);
 
             if (result.IsValidMove)
             {

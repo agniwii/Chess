@@ -1,6 +1,6 @@
 using System.Collections;
 using Chess_Backend.Models;
-
+using Chess_Backend.DTOs;
 namespace Chess_Backend.Services
 {
     public class ChessService
@@ -39,11 +39,19 @@ namespace Chess_Backend.Services
             return _game.ContainsKey(gameId) ? _game[gameId] : null;
         }
 
-        public MoveResult MakeMove(string gameId, Position from, Position to)
+        public MoveResult MakeMove(string gameId,string playerId, Position from, Position to)
         {
             if (!_game.ContainsKey(gameId))
             {
                 throw new ArgumentException("Game not found", nameof(gameId));
+            }
+            if(_game[gameId].CurrentPlayer.ToString() != playerId)
+            {
+                return new MoveResult
+                {
+                    IsValidMove = false,
+                    Message = "It's not your turn"
+                };
             }
 
             Console.WriteLine("Before move:");

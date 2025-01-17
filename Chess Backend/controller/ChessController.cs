@@ -1,4 +1,5 @@
 using Chess_Backend.Models;
+using Chess_Backend.DTOs;
 using Chess_Backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,10 +19,11 @@ namespace Chess_Backend.Controller
         [HttpPost("move")]
         public IActionResult MakeMove([FromBody] MoveRequest request)
         {
-            var from = new Position(request.FromX, request.FromY);
-            var to = new Position(request.ToX, request.ToY);
-            string? gameId = request.GameId ?? string.Empty;
-            var result = _chessService.MakeMove(gameId,from, to);
+            var from = new Position(request.From.X, request.From.Y);
+            var to = new Position(request.To.X, request.To.Y);
+            string gameId = request.GameId ?? string.Empty;
+            string playerId = request.PlayerId ?? string.Empty;
+            var result = _chessService.MakeMove(gameId,playerId,from, to);
             return Ok(result);
         }
 

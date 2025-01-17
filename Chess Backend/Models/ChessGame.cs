@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using Chess_Backend.DTOs;
 
 namespace Chess_Backend.Models
 {
     public class ChessGame
     {
-        public Piece?[,] Board { get; set; } = new Piece?[8, 8];
+        public Piece?[,] Board { get; set; }
         public Color CurrentPlayer { get; private set; }
         public bool IsCheck { get; private set; }
         public bool IsCheckmate { get; private set; }
@@ -26,7 +27,8 @@ namespace Chess_Backend.Models
         public ChessGame(string gameId)
         {
             GameId = gameId;
-            Players = [];
+            Players = new List<IPlayer>();
+            Board = new Piece?[8, 8];
             InitializeBoard();
             PrintBoard();
             CurrentPlayer = Color.White;
@@ -82,7 +84,7 @@ namespace Chess_Backend.Models
 
             if (!pieces.IsValidMove(to, Board))
             {
-                return new MoveResult { IsValidMove = false, Message = "Invalid move: Illegal move" };
+                return new MoveResult { IsValidMove = false, Message = "Invalid move: Illegal move"};
             }
 
             var targetPiece = Board[to.X, to.Y];
@@ -96,6 +98,7 @@ namespace Chess_Backend.Models
             {
                 return new MoveResult { IsValidMove = false, Message = "Invalid move: King is in check" };
             }
+            pieces.MoveCount++;
 
             Board = tempBoard;
             pieces.Position = to;
@@ -122,6 +125,8 @@ namespace Chess_Backend.Models
                 IsCheckmate = IsCheckmate,
                 IsStalemate = IsStalemate,
                 CapturedPiece = isCapture ? targetPiece : null,
+                From = from,
+                To = to,
             };
         }
 
@@ -150,7 +155,7 @@ namespace Chess_Backend.Models
             return false;
         }
 
-        private Position? GetKingPosition(Piece?[,] board, Color color)
+        private static Position? GetKingPosition(Piece?[,] board, Color color)
         {
             for (int i = 0; i < 8; i++)
             {
@@ -169,27 +174,107 @@ namespace Chess_Backend.Models
 
         private bool HasAnyValidMove(Color color)
         {
-            for (int i = 0; i < 8; i++)
+            // Get all pieces of the given color
+            var pieces = Board.Cast<Piece?>()
+                    .Where(p => p?.Color == color);
+
+            // For each piece, check if it has any valid moves
+            foreach (var piece in pieces)
             {
-                for (int j = 0; j < 8; j++)
+            // Get potential moves within board bounds
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 8; y++)
                 {
-                    var piece = Board[i, j];
-                    if (piece != null && piece.Color == color)
-                    {
-                        for (int x = 0; x < 8; x++)
-                        {
-                            for (int y = 0; y < 8; y++)
-                            {
-                                if (piece.IsValidMove(new Position(x, y), Board))
-                                {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
+                if (piece?.IsValidMove(new Position(x, y), Board) == true)
+                {
+                    return true;
+                }
                 }
             }
+            }
             return false;
+        }
+
+        public void MakeCastling(Position king, Position Rook)
+        {
+            // Check if the king and rook are in their initial positions
+            if (king.Y != Rook.Y)
+            {
+                return;
+            }
+
+            // Check if the squares between the king and rook are empty
+            int row = king.Y;
+            int rookColumn = Math.Min(king.X, Rook.X);
+            int kingColumn = Math.Max(king.X, Rook.X);
+
+            // Check if squares between rook and king are empty for queenside castling
+            for (int col = rookColumn + 1; col < kingColumn; col++)
+            {
+                if (Board[col, row] != null)
+                {
+                    return;
+                }
+            }
+
+            // Move the king and rook
+            Board[kingColumn, row] = Board[king.X, row];
+            Board[king.X, row] = null;
+            Board[rookColumn, row] = Board[Rook.X, row];
+            Board[Rook.X, row] = null;
+        }
+
+        public bool IsCastlingMove()
+        {
+            if(IsCheck) 
+            {
+                IsCastling = false;
+                return false;
+            }
+            if (Board.Cast<Piece?>().FirstOrDefault(p => p is King && p.Color == CurrentPlayer) is King king && king.MoveCount > 0) 
+            {
+                IsCastling = false;
+                return false;
+            }
+            if(Board.Cast<Piece?>().FirstOrDefault(p => p is Rook && p.Color == CurrentPlayer) is Rook rook && rook.MoveCount > 0) 
+            {
+                IsCastling = false;
+                return false;
+            }
+            if (IsKingInCheck(Board, CurrentPlayer)) 
+            {
+                IsCastling = false;
+                return false;
+            }
+            // check my rook to king is empty
+            int row = CurrentPlayer == Color.White ? 0 : 7;
+            int rookColumn = 0;
+            int kingColumn = 4;
+
+            // Check if squares between rook and king are empty for queenside castling
+            for (int col = rookColumn + 1; col < kingColumn; col++)
+            {
+                if (Board[col, row] != null)
+                {
+                    IsCastling = false;
+                    return false;
+                }
+            }
+
+            rookColumn = 7;
+
+            // Check if squares between king and rook are empty for kingside castling
+            for (int col = kingColumn + 1; col < rookColumn; col++)
+            {
+                if (Board[col, row] != null)
+                {
+                    IsCastling = false;
+                    return false;
+                }
+            }
+            IsCastling = true;
+            return true;
         }
 
         public void PrintBoard()
@@ -215,25 +300,18 @@ namespace Chess_Backend.Models
             Console.WriteLine("  a b c d e f g h");
         }
 
-        private string GetPieceSymbol(Piece piece)
+        private static string GetPieceSymbol(Piece piece)
         {
-            switch (piece)
+            return piece switch
             {
-                case King k:
-                    return k.Color == Color.White ? "K" : "k";
-                case Queen q:
-                    return q.Color == Color.White ? "Q" : "q";
-                case Rook r:
-                    return r.Color == Color.White ? "R" : "r";
-                case Bishop b:
-                    return b.Color == Color.White ? "B" : "b";
-                case Knight n:
-                    return n.Color == Color.White ? "N" : "n";
-                case Pawn p:
-                    return p.Color == Color.White ? "P" : "p";
-                default:
-                    return ".";
-            }
+                King k => k.Color == Color.White ? "K" : "k",
+                Queen q => q.Color == Color.White ? "Q" : "q",
+                Rook r => r.Color == Color.White ? "R" : "r",
+                Bishop b => b.Color == Color.White ? "B" : "b",
+                Knight n => n.Color == Color.White ? "N" : "n",
+                Pawn p => p.Color == Color.White ? "P" : "p",
+                _ => ".",
+            };
         }
     }
 }
