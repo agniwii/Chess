@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createConnection, startConnection, stopConnection } from './utilities/network';
+import { createConnection, onServerMethod, startConnection, stopConnection } from './utilities/network';
+
+declare global {
+    interface Window {
+        connection: signalR.HubConnection;
+    }
+}
 import { RootState, AppDispatch } from './store/store';
 import { Modals } from './components/Modals';
 import { JoinGame } from './pages/joinGame';
 import { Board } from './components';
 import './App.css';
-import { getPossibleMoves, makeMove, joinGame } from './features';
+import { getPossibleMoves, makeMove, joinGame,startSignalRConnection, setCurrentPlayerId } from './features';
 
 function App() {
     const dispatch = useDispatch<AppDispatch>();
@@ -17,7 +23,31 @@ function App() {
     useEffect(() => {
         const url = "http://localhost:5042/chesshub";
         const connection = createConnection(url);
+        startSignalRConnection(url);
         startConnection(connection).then(() => setConnection(connection));
+        window.connection = connection;
+        console.log(`Connection established. ${connection}`);
+        onServerMethod(connection, "PlayerJoined", (...args: unknown[]) => {
+                    const playerId = args[0] as string;
+                    console.log(`Player joined. ${playerId}`);
+                    dispatch(setCurrentPlayerId(playerId));
+        });
+        onServerMethod(connection, "GameReady", (...args: unknown[]) => {
+            const gameData = args[0] as {
+                gameId: string;
+                currentPlayer: string;
+                players: {
+                    connectionId: string;
+                    name: string;
+                    color: number;
+                    capturedPieces: string[] | null;
+                }[];
+            };
+            dispatch(setCurrentPlayerId(gameData));
+        });
+
+        console.log(`current player. ${currentPlayerId}`);
+        console.log(`game id. ${gameId}`);
 
         // Handle cleanup saat komponen unmount
         return () => {
@@ -25,13 +55,13 @@ function App() {
                 stopConnection(connection);
             }
         };
-    }, [dispatch]);
+    }, [dispatch, currentPlayerId,gameId]);
 
     // Handle join game
     const handleJoinGame = async (playerName: string) => {
         if (connection) {
             const gameId = "game1"; // Ganti dengan game ID yang sesuai
-            await dispatch(joinGame({ connection, gameId, playerName }));
+            await dispatch(joinGame({ gameId, playerName }));
             
         } else {
             console.error("Connection is not established.");
@@ -54,12 +84,12 @@ function App() {
                 to: { x, y },
             };
             if (connection) {
-                await dispatch(makeMove({ connection, moveRequest }));
+                await dispatch(makeMove({ moveRequest }));
             }
         } else {
             // Dapatkan possible moves untuk bidak yang dipilih
             if (connection) {
-                await dispatch(getPossibleMoves({ connection, gameId, x, y, playerId: currentPlayerId }));
+                await dispatch(getPossibleMoves({ gameId, x, y, playerId: currentPlayerId }));
             }
         }
     };
@@ -72,7 +102,7 @@ function App() {
             </div>
 
             {connection && (
-                <Modals isOpen={!!gameId} connectionId={connection} gameId={gameId || ''}>
+                <Modals isOpen={!!currentPlayerId} connectionId={connection} gameId={gameId || ''}>
                     {gameId ? (
                         <>
                             <h2>Game ID: {gameId}</h2>

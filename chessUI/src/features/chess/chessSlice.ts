@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Position } from "../../models";
+import { Position ,GameReady} from "../../models";
 
 interface ChessState {
     gameId: string | null;
@@ -10,11 +10,11 @@ interface ChessState {
 }
 
 const initialState: ChessState = {
-    gameId: null,
+    gameId: "",
     board: Array(8).fill(Array(8).fill(null)),
     selectedPosition: null,
     possibleMoves: [],
-    currentPlayerId: null,
+    currentPlayerId: "",
 };
 
 const chessSlice = createSlice({
@@ -42,6 +42,11 @@ const chessSlice = createSlice({
         setCurrentPlayerId(state, action: PayloadAction<string | null>) {
             state.currentPlayerId = action.payload;
         },
+        setRPSChallange(state, action: PayloadAction<GameReady| null>){
+            state.gameId = action.payload?.gameId ?? null;
+            state.currentPlayerId = action.payload?.playerId ?? null;
+        }
+        ,
         resetGame(state) {
             state.board = Array(8).fill(Array(8).fill(null));
             state.selectedPosition = null;

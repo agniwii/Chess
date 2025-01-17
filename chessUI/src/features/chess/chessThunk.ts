@@ -59,12 +59,12 @@ export const startSignalRConnection = createAsyncThunk(
 export const joinGame = createAsyncThunk(
     "chess/joinGame",
     async (
-        { connection, gameId, playerName }: 
-        { connection: signalR.HubConnection; gameId: string; playerName: string },
+        {  gameId, playerName }: 
+        {  gameId: string; playerName: string },
         { rejectWithValue }
     ) => {
         try {
-            await invokeServerMethod(connection, "JoinGame", gameId, playerName);
+            await invokeServerMethod(window.connection, "JoinGame", gameId, playerName);
         } catch (err) {
             console.error("Error joining game:", err);
             return rejectWithValue(err);
@@ -76,8 +76,8 @@ export const joinGame = createAsyncThunk(
 export const getPossibleMoves = createAsyncThunk(
     "chess/getPossibleMoves",
     async (
-        { connection, gameId, x, y, playerId }: 
-        { connection: signalR.HubConnection; gameId: string; x: number; y: number; playerId: string },
+        {  gameId, x, y, playerId }: 
+        {  gameId: string; x: number; y: number; playerId: string },
         { getState, rejectWithValue }
     ) => {
         const state = getState() as RootState;
@@ -88,7 +88,7 @@ export const getPossibleMoves = createAsyncThunk(
         }
 
         try {
-            await invokeServerMethod(connection, "GetPossibleMoves", gameId, x, y, playerId);
+            await invokeServerMethod(window.connection ,"GetPossibleMoves", gameId, x, y, playerId);
         } catch (err) {
             return rejectWithValue(err);
         }
@@ -99,8 +99,8 @@ export const getPossibleMoves = createAsyncThunk(
 export const makeMove = createAsyncThunk(
     "chess/makeMove",
     async (
-        { connection, moveRequest }: 
-        { connection: signalR.HubConnection; moveRequest: MoveRequest },
+        {  moveRequest }: 
+        {  moveRequest: MoveRequest },
         { dispatch, getState, rejectWithValue }
     ) => {
         const state = getState() as RootState;
@@ -111,7 +111,7 @@ export const makeMove = createAsyncThunk(
         }
 
         try {
-            await invokeServerMethod(connection, "MovePiece", moveRequest);
+            await invokeServerMethod(window.connection ,"MovePiece", moveRequest);
 
             // Update giliran pemain
             const nextPlayerId = currentPlayerId === "player1" ? "player2" : "player1";
