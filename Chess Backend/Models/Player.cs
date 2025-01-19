@@ -1,3 +1,4 @@
+using Chess_Backend.Models.Interfaces;
 namespace Chess_Backend.Models
 {
     public class Player : IPlayer

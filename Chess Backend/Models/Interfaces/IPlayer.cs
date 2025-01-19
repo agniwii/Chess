@@ -1,4 +1,4 @@
-namespace Chess_Backend.Models
+namespace Chess_Backend.Models.Interfaces
 {
     public interface IPlayer
     {

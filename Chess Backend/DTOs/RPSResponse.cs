@@ -5,5 +5,6 @@ namespace Chess_Backend.DTOs
         public string? Winner { get; set; }
         public string? Loser { get; set; }
         public bool IsDraw { get; set; }
+        public required string Message { get; set; }
     }
 }

@@ -3,15 +3,19 @@ using Chess_Backend.Services;
 using Chess_Backend.Models;
 using System.Collections.Immutable;
 using Chess_Backend.DTOs;
+using Chess_Backend.Services.Interfaces;
 
 namespace Chess_Backend.Hubs
 {
     public class ChessHub : Hub
     {
-        private readonly ChessService _chessService;
-        public ChessHub(ChessService chessService)
+        private readonly IChessService _chessService;
+        private readonly IRPSService _rpsService;
+
+        public ChessHub(IChessService chessService, IRPSService rpsService)
         {
             _chessService = chessService;
+            _rpsService = rpsService;
         }
 
         public async Task JoinGame(string gameId, string playerName)
@@ -25,7 +29,7 @@ namespace Chess_Backend.Hubs
             if (_chessService.GetGame(gameId) == null)
             {
                 var game = new ChessGame(gameId);
-                _chessService._game.Add(gameId, game);
+                _chessService.AddGame(gameId, game);
             }
 
             var player = new Player(playerName, Color.None, Context.ConnectionId);
@@ -33,9 +37,16 @@ namespace Chess_Backend.Hubs
 
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             await Clients.Client(Context.ConnectionId).SendAsync("PlayerJoined", gameId);
+            await Clients.Clients(Context.ConnectionId).SendAsync("PlayerId", Context.ConnectionId);
 
-            if (_chessService.GetTotalPlayers(gameId) == 2)
+            if (_chessService.GetTotalPlayers(gameId) == 1)
             {
+                // Send loading state to the first player
+                await Clients.Caller.SendAsync("Loading", "Waiting for another player to join...");
+            }
+            else if (_chessService.GetTotalPlayers(gameId) == 2)
+            {
+                // Start the game when two players have joined
                 await StartGame(gameId);
             }
         }
@@ -57,7 +68,44 @@ namespace Chess_Backend.Hubs
                 }
             };
 
+            // Notify both players that the game is ready
             await Clients.Group(gameId).SendAsync("GameReady", response);
+
+            // Start RPS after GameReady
+            await StartRPS(gameId);
+        }
+
+        private async Task StartRPS(string gameId)
+        {
+            await Clients.Group(gameId).SendAsync("StartRPS", "Choose Rock, Paper, or Scissors to determine who plays as White.");
+        }
+
+        public async Task SubmitChoice(RPSRequest request)
+        {
+            var response = await _rpsService.SubmitChoice(request);
+
+            await Clients.Group(request.GameId).SendAsync("RPSResult", response);
+            if (response.Winner != null)
+            {
+                var players = _chessService.GetPlayers(request.GameId).ToImmutableList();
+                var player1 = players[0];
+                var player2 = players[1];
+
+                player1.Color = response.Winner == player1.Name ? Color.White : Color.Black;
+                player2.Color = response.Winner == player2.Name ? Color.White : Color.Black;
+
+                await Clients.Client(player1.ConnectionId).SendAsync("RPSResult", $"{player1.Name} gets {(response.Winner == player1.Name ? "White" : "Black")} piece");
+                await Clients.Client(player2.ConnectionId).SendAsync("RPSResult", $"{player2.Name} gets {(response.Winner == player2.Name ? "White" : "Black")} piece");
+
+                // Start the chess game after RPS is resolved
+                await Clients.Group(request.GameId).SendAsync("StartChess", "The chess game is starting!");
+            }
+            else
+            {
+                await Clients.Group(request.GameId).SendAsync("RPSResult", "Draw");
+                // Restart RPS if it's a draw
+                await StartRPS(request.GameId);
+            }
         }
 
         public async Task MakeChoice(string gameId, string choice)
@@ -101,7 +149,7 @@ namespace Chess_Backend.Hubs
             string gameId = request.GameId;
             string playerId = request.PlayerId;
 
-            var result = _chessService.MakeMove(gameId, playerId,from, to);
+            var result = _chessService.MakeMove(gameId, playerId, from, to);
 
             if (result.IsValidMove)
             {

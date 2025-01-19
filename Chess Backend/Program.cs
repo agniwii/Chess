@@ -1,5 +1,6 @@
 using Chess_Backend.Hubs;
 using Chess_Backend.Services;
+using Chess_Backend.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,6 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins", policy =>
     {
-            // policy.AllowAnyOrigin()
         policy.WithOrigins("http://localhost:5173") // Izinkan origin frontend
               .AllowAnyHeader()
               .AllowAnyMethod()
@@ -19,9 +19,17 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Register services
+builder.Services.AddSingleton<IChessService,ChessService>();
+builder.Services.AddSingleton<IRPSService,RPSService>();
+
+// Register SignalR with detailed errors enabled
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+});
+
 builder.Services.AddControllers();
-builder.Services.AddSignalR();
-builder.Services.AddSingleton<ChessService>();
 
 var app = builder.Build();
 

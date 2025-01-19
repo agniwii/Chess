@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using Chess_Backend.DTOs;
+using Chess_Backend.Models.Interfaces;
 
 namespace Chess_Backend.Models
 {
