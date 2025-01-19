@@ -1,26 +1,22 @@
 using System.Collections;
 using Chess_Backend.Models;
 using Chess_Backend.DTOs;
+using Chess_Backend.Models.Interfaces;
+
 namespace Chess_Backend.Services
 {
-    public class ChessService
+    public class ChessService : IChessService
     {
-
-        public Dictionary<string, ChessGame> _game = new();
-        // buat class khusus untuk menyimpan pilihan pemain
+        private Dictionary<string, ChessGame> _game = new();
         private Dictionary<string, Dictionary<string, string>> _playerChoices = new();
-        // private List<KeyValuePair<string,List<KeyValuePair<string, string>>>> _playerChoices = new List<KeyValuePair<string,List<KeyValuePair<string, string>>>>();
-        private IPlayer? player;
 
-        // menerima instant player dari luar dari hub dan buat interface untuk aturannya agar menjadi 
-        // lebih fleksibel public void AddPlayer(IPlayer player)
-        public void AddPlayer(string gameId, IPlayer players)
+        public void AddPlayer(string gameId, IPlayer player)
         {
             if (!_game.ContainsKey(gameId))
             {
                 _game.Add(gameId, new ChessGame(gameId));
             }
-            _game[gameId].Players.Add(players);
+            _game[gameId].Players.Add(player);
         }
 
         public int GetTotalPlayers(string gameId)
@@ -28,7 +24,6 @@ namespace Chess_Backend.Services
             return _game.ContainsKey(gameId) ? _game[gameId].Players.Count : 0;
         }
 
-        // ganti menjadi IEnumerable<Player> agar lebih fleksibel
         public IEnumerable<Player> GetPlayers(string gameId)
         {
             return _game.ContainsKey(gameId) ? _game[gameId].Players.Select(p => (Player)p) : Enumerable.Empty<Player>();
@@ -39,18 +34,26 @@ namespace Chess_Backend.Services
             return _game.ContainsKey(gameId) ? _game[gameId] : null;
         }
 
-        public MoveResult MakeMove(string gameId,string playerId, Position from, Position to)
+        public void AddGame(string gameId, ChessGame game)
         {
             if (!_game.ContainsKey(gameId))
             {
-                // throw new ArgumentException("Game not found", nameof(gameId));
+                _game.Add(gameId, game);
+            }
+
+        }
+
+        public MoveResult MakeMove(string gameId, string playerId, Position from, Position to)
+        {
+            if (!_game.ContainsKey(gameId))
+            {
                 return new MoveResult
                 {
                     IsValidMove = false,
                     Message = "Game not found"
                 };
             }
-            if(_game[gameId].CurrentPlayer.ToString() != playerId)
+            if (_game[gameId].CurrentPlayer.ToString() != playerId)
             {
                 return new MoveResult
                 {
@@ -100,16 +103,14 @@ namespace Chess_Backend.Services
                 }
             }
 
-
             return new PossibleMovesResponse
             {
                 PossibleMoves = possibleMoves,
-                PieceType = piece
-                    .GetType()
-                    .Name,
+                PieceType = piece.GetType().Name,
                 PieceColor = piece.Color.ToString(),
             };
         }
+
         public void AddPlayerChoice(string gameId, string connectionId, string choice)
         {
             if (!_playerChoices.ContainsKey(gameId)) _playerChoices.Add(gameId, new Dictionary<string, string>());
@@ -117,26 +118,19 @@ namespace Chess_Backend.Services
             _playerChoices[gameId][connectionId] = choice;
         }
 
-        // ubah jadi key value pair agar lebih fleksibel
-        // public List<KeyValuePair<string, string>> GetPlayerChoice(string gameId, string connectionId)
-        // {
-        //     // Kembalikan pilihan pemain untuk gameId tertentu
-        //     return _playerChoices.ContainsKey(gameId) ? _playerChoices[gameId] : new List<KeyValuePair<string, string>>();
-        // }s
         public Dictionary<string, string> GetPlayerChoices(string gameId)
         {
-            // Kembalikan pilihan pemain untuk gameId tertentu
             return _playerChoices.ContainsKey(gameId) ? _playerChoices[gameId] : new Dictionary<string, string>();
         }
 
         public void ResetPlayerChoices(string gameId)
         {
-            // Reset pilihan pemain untuk gameId tertentu
             if (_playerChoices.ContainsKey(gameId))
             {
                 _playerChoices[gameId].Clear();
             }
         }
+
         public string DetermineRPSWinner(string choice1, string choice2)
         {
             if (choice1 == choice2)
@@ -156,13 +150,16 @@ namespace Chess_Backend.Services
 
         public string GetCurrentPlayer(string gameId)
         {
-            string playerColor = _game[gameId].CurrentPlayer.ToString();
-            if (player != null && playerColor == player.Color.ToString())
+            if (!_game.ContainsKey(gameId))
             {
-                var currentPlayer = _game[gameId].Players.Find(p => p.Color.ToString() == playerColor.ToString());
-                return currentPlayer != null ? currentPlayer.Name : "Unknown";
+                return string.Empty; // Or throw an exception if the game doesn't exist
             }
-            return string.Empty;
+
+            string playerColor = _game[gameId].CurrentPlayer.ToString();
+            var currentPlayer = _game[gameId].Players.Find(p => p.Color.ToString() == playerColor);
+            return currentPlayer != null ? currentPlayer.Name : "Unknown";
         }
+
+
     }
 }

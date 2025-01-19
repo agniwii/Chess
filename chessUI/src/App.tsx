@@ -1,118 +1,49 @@
 import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { createConnection, onServerMethod, startConnection, stopConnection } from './utilities/network';
-
-declare global {
-    interface Window {
-        connection: signalR.HubConnection;
-    }
-}
-import { RootState, AppDispatch } from './store/store';
+import { useSignalR } from './hooks/signalRContext'; // Ensure this path is correct
 import { Modals } from './components/Modals';
 import { JoinGame } from './pages/joinGame';
-import { Board } from './components';
 import './App.css';
-import { getPossibleMoves, makeMove, joinGame,startSignalRConnection, setCurrentPlayerId } from './features';
 
 function App() {
-    const dispatch = useDispatch<AppDispatch>();
-    const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
-    const { gameId, currentPlayerId, selectedPosition } = useSelector((state: RootState) => state.chess);
+    const { connection, playerId, gameStatus } = useSignalR();
+    const [isJoining, setIsJoining] = useState(false);
 
-    // Mulai koneksi SignalR saat komponen dimount
     useEffect(() => {
-        const url = "http://localhost:5042/chesshub";
-        const connection = createConnection(url);
-        startSignalRConnection(url);
-        startConnection(connection).then(() => setConnection(connection));
-        window.connection = connection;
-        console.log(`Connection established. ${connection}`);
-        onServerMethod(connection, "PlayerJoined", (...args: unknown[]) => {
-                    const playerId = args[0] as string;
-                    console.log(`Player joined. ${playerId}`);
-                    dispatch(setCurrentPlayerId(playerId));
-        });
-        onServerMethod(connection, "GameReady", (...args: unknown[]) => {
-            const gameData = args[0] as {
-                gameId: string;
-                currentPlayer: string;
-                players: {
-                    connectionId: string;
-                    name: string;
-                    color: number;
-                    capturedPieces: string[] | null;
-                }[];
-            };
-            dispatch(setCurrentPlayerId(gameData));
-        });
-
-        console.log(`current player. ${currentPlayerId}`);
-        console.log(`game id. ${gameId}`);
-
-        // Handle cleanup saat komponen unmount
-        return () => {
+        const checkPlayer = async () => {
             if (connection) {
-                stopConnection(connection);
+                if (playerId) {
+                    setIsJoining(true);
+                }
             }
         };
-    }, [dispatch, currentPlayerId,gameId]);
-
-    // Handle join game
-    const handleJoinGame = async (playerName: string) => {
-        if (connection) {
-            const gameId = "game1"; // Ganti dengan game ID yang sesuai
-            await dispatch(joinGame({ gameId, playerName }));
-            
-        } else {
-            console.error("Connection is not established.");
-        }
-    };
-
-    // Handle square click di papan
-    const handleSquareClick = async (x: number, y: number) => {
-        if (!currentPlayerId || !gameId) {
-            console.log("No player or game ID is currently active.");
-            return;
-        }
-
-        if (selectedPosition) {
-            // Lakukan pergerakan bidak
-            const moveRequest = {
-                gameId,
-                playerId: currentPlayerId,
-                from: selectedPosition,
-                to: { x, y },
-            };
-            if (connection) {
-                await dispatch(makeMove({ moveRequest }));
-            }
-        } else {
-            // Dapatkan possible moves untuk bidak yang dipilih
-            if (connection) {
-                await dispatch(getPossibleMoves({ gameId, x, y, playerId: currentPlayerId }));
-            }
-        }
-    };
+        console.log('gameStatus:', gameStatus);
+        checkPlayer();
+    }, [connection, playerId]);
 
     return (
         <>
             <div className='Container'>
                 <h1>Chess</h1>
-                <JoinGame onJoin={handleJoinGame} />
+                {!isJoining && <JoinGame />}
             </div>
 
-            {connection && (
-                <Modals isOpen={!!currentPlayerId} connectionId={connection} gameId={gameId || ''}>
-                    {gameId ? (
-                        <>
-                            <h2>Game ID: {gameId}</h2>
-                            <h3>Current Player: {currentPlayerId}</h3>
-                            <Board onSquareClick={handleSquareClick} />
-                        </>
-                    ) : (
+            {connection && isJoining && (
+                <Modals 
+                    isOpen={isJoining}
+                    forceHideChildren={gameStatus === 'RPSStarted'}
+                >
+                    {gameStatus === 'Loading' && (
                         <div className='Loading-Container'>
                             <h2>Waiting for player 2</h2>
                             <div className="loader"></div>
+                        </div>
+                    )}
+
+                    {gameStatus === 'RPSStarted' && null}
+
+                    {gameStatus === 'ChessStarted' && (
+                        <div>
+                            <h2>Chess game is starting!</h2>
                         </div>
                     )}
                 </Modals>

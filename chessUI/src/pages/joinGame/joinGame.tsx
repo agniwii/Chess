@@ -1,30 +1,31 @@
+import React, { useState } from 'react';
+import { useSignalR } from '../../hooks/signalRContext'; // Import the context
+import styles from './joinGame.module.css';
 
-import React from "react";
+export const JoinGame: React.FC = () => {
+    const { joinRoom, setPlayerName } = useSignalR(); // Use the context
+    const [nameInput, setNameInput] = useState('');
 
-import styles from "./joinGame.module.css";
-
-interface JoinGameProps {
-    onJoin: (playerName: string) => void;
-}
-export const JoinGame: React.FC<JoinGameProps> = ({onJoin}) => {
-    const [playerName, setPlayerName] = React.useState("");
-    const handleJoin = () =>{
-        if(playerName.trim()){
-            onJoin(playerName);
-        }else{
-            alert("Please enter a valid game code and player name");
+    const handleJoin = () => {
+        if (nameInput.trim()) {
+            setPlayerName(nameInput); // Set the player's name in the context
+            joinRoom("test", nameInput); // Replace "test" with your game ID logic
+        } else {
+            alert("Please enter a valid player name");
         }
     };
+
     return (
         <div className={styles.JoinGame}>
             <input
-            type="text"
-            placeholder="Enter Player Name"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
+                type="text"
+                placeholder="Enter Player Name"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
             />
-            <button className={styles.button} onClick={handleJoin}>Join Game</button>
+            <button className={styles.button} onClick={handleJoin}>
+                Join Game
+            </button>
         </div>
     );
 };
-
